@@ -378,8 +378,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -mtune=cortex-a8 -march=armv7-a -mfpu=neon -mfloat-abi=softfp \
 		   -fno-gcse -ftree-vectorize -fsingle-precision-constant -funswitch-loops \
 		   -fprofile-correction -funsafe-math-optimizations -fipa-cp-clone \
-		   -fgraphite -fgraphite-identity -floop-interchange -floop-strip-mine \
-		   -floop-block -pipe
+		   -fgraphite-identity -floop-interchange -floop-strip-mine \
+		   -floop-block -pipe -mthumb
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
