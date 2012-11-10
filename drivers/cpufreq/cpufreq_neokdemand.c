@@ -63,8 +63,8 @@ static cpumask_t work_cpumask;
 static unsigned int suspended;
 
 enum {
-        neokdemand_DEBUG_JUMPS=1,
-        neokdemand_DEBUG_LOAD=2
+        NEOKDEMAND_DEBUG_JUMPS=1,
+        NEOKDEMAND_DEBUG_LOAD=2
 };
 
 /*
@@ -97,14 +97,14 @@ static unsigned int up_min_freq;
  * to minimize wakeup issues.
  * Set sleep_max_freq=0 to disable this behavior.
  */
-#define DEFAULT_SLEEP_MAX_FREQ 245000
+#define DEFAULT_SLEEP_MAX_FREQ 245760
 static unsigned int sleep_max_freq;
 
 /*
  * The frequency to set when waking up from sleep.
  * When sleep_max_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ 804000
+#define DEFAULT_SLEEP_WAKEUP_FREQ 806400
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -112,13 +112,13 @@ static unsigned int sleep_wakeup_freq;
  * go below this frequency.
  * Set awake_min_freq=0 to disable this behavior.
  */
-#define DEFAULT_AWAKE_MIN_FREQ 122000
+#define DEFAULT_AWAKE_MIN_FREQ 245760
 static unsigned int awake_min_freq;
 
 /*
  * Sampling rate, I highly recommend to leave it at 2.
  */
-#define DEFAULT_SAMPLE_RATE_JIFFIES 19
+#define DEFAULT_SAMPLE_RATE_JIFFIES 11
 static unsigned int sample_rate_jiffies;
 
 /*
@@ -138,13 +138,13 @@ static unsigned int ramp_down_step;
 /*
  * CPU freq will be increased if measured load > max_cpu_load;
  */
-#define DEFAULT_MAX_CPU_LOAD 55
+#define DEFAULT_MAX_CPU_LOAD 50
 static unsigned long max_cpu_load;
 
 /*
  * CPU freq will be decreased if measured load < min_cpu_load;
  */
-#define DEFAULT_MIN_CPU_LOAD 45
+#define DEFAULT_MIN_CPU_LOAD 42
 static unsigned long min_cpu_load;
 
 
@@ -217,7 +217,7 @@ static void cpufreq_neokdemand_timer(unsigned long data)
         else
                 cpu_load = 100 * (unsigned int)(delta_time - delta_idle) / (unsigned int)delta_time;
 
-        if (debug_mask & neokdemand_DEBUG_LOAD)
+        if (debug_mask & NEOKDEMAND_DEBUG_LOAD)
                 printk(KERN_INFO "neokdemandT @ %d: load %d (delta_time %llu)\n",policy->cur,cpu_load,delta_time);
 
         this_neokdemand->cur_cpu_load = cpu_load;
@@ -294,7 +294,7 @@ static void cpufreq_neokdemand_freq_change_time_work(struct work_struct *work)
         struct cpufreq_policy *policy;
         unsigned int relation = CPUFREQ_RELATION_L;
         cpumask_t tmp_mask = work_cpumask;
-        for_each_cpu(cpu, tmp_mask) {
+        for_each_cpu(cpu, &tmp_mask) {
                 this_neokdemand = &per_cpu(neokdemand_info, cpu);
                 policy = this_neokdemand->cur_policy;
                 cpu_load = this_neokdemand->cur_cpu_load;
@@ -327,7 +327,7 @@ static void cpufreq_neokdemand_freq_change_time_work(struct work_struct *work)
                 new_freq = validate_freq(this_neokdemand,new_freq);
 
                 if (new_freq != policy->cur) {
-                        if (debug_mask & neokdemand_DEBUG_JUMPS)
+                        if (debug_mask & NEOKDEMAND_DEBUG_JUMPS)
                                 printk(KERN_INFO "neokdemandQ: jumping from %d to %d\n",policy->cur,new_freq);
 
                         __cpufreq_driver_target(policy, new_freq, relation);
@@ -340,12 +340,12 @@ static void cpufreq_neokdemand_freq_change_time_work(struct work_struct *work)
         }
 }
 
-static ssize_t show_debug_mask(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_debug_mask(struct kobject *kobj, struct attribute *attr, char *buf)
 {
-        return sprintf(buf, "%lu\n", debug_mask);
+	return sprintf(buf, "%lu\n", debug_mask);
 }
 
-static ssize_t store_debug_mask(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_debug_mask(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -355,15 +355,12 @@ static ssize_t store_debug_mask(struct cpufreq_policy *policy, const char *buf, 
         return res;
 }
 
-static struct freq_attr debug_mask_attr = __ATTR(debug_mask, 0644,
-                show_debug_mask, store_debug_mask);
-
-static ssize_t show_up_rate_us(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_up_rate_us(struct kobject *kobj, struct attribute *attr, char *buf)
 {
-        return sprintf(buf, "%lu\n", up_rate_us);
+	return sprintf(buf, "%lu\n", up_rate_us);
 }
 
-static ssize_t store_up_rate_us(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_up_rate_us(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -373,15 +370,12 @@ static ssize_t store_up_rate_us(struct cpufreq_policy *policy, const char *buf, 
         return res;
 }
 
-static struct freq_attr up_rate_us_attr = __ATTR(up_rate_us, 0644,
-                show_up_rate_us, store_up_rate_us);
-
-static ssize_t show_down_rate_us(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_down_rate_us(struct kobject *kobj, struct attribute *attr, char *buf)
 {
-        return sprintf(buf, "%lu\n", down_rate_us);
+	return sprintf(buf, "%lu\n", down_rate_us);
 }
 
-static ssize_t store_down_rate_us(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_down_rate_us(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -391,33 +385,27 @@ static ssize_t store_down_rate_us(struct cpufreq_policy *policy, const char *buf
         return res;
 }
 
-static struct freq_attr down_rate_us_attr = __ATTR(down_rate_us, 0644,
-                show_down_rate_us, store_down_rate_us);
-
-static ssize_t show_up_min_freq(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_up_min_freq(struct kobject *kobj, struct attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", up_min_freq);
+	return sprintf(buf, "%u\n", up_min_freq);
 }
 
-static ssize_t store_up_min_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_up_min_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
-        ssize_t res;
-        unsigned long input;
-        res = strict_strtoul(buf, 0, &input);
-        if (res >= 0 && input >= 0)
-          up_min_freq = input;
-        return res;
+	ssize_t res;
+	unsigned long input;
+	res = strict_strtoul(buf, 0, &input);
+	if (res >= 0 && input >= 0)
+	  up_min_freq = input;
+	return res;
 }
 
-static struct freq_attr up_min_freq_attr = __ATTR(up_min_freq, 0644,
-                show_up_min_freq, store_up_min_freq);
-
-static ssize_t show_sleep_max_freq(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_sleep_max_freq(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", sleep_max_freq);
 }
 
-static ssize_t store_sleep_max_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_sleep_max_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -427,15 +415,12 @@ static ssize_t store_sleep_max_freq(struct cpufreq_policy *policy, const char *b
         return res;
 }
 
-static struct freq_attr sleep_max_freq_attr = __ATTR(sleep_max_freq, 0644,
-                show_sleep_max_freq, store_sleep_max_freq);
-
-static ssize_t show_sleep_wakeup_freq(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_sleep_wakeup_freq(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", sleep_wakeup_freq);
 }
 
-static ssize_t store_sleep_wakeup_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_sleep_wakeup_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -445,15 +430,12 @@ static ssize_t store_sleep_wakeup_freq(struct cpufreq_policy *policy, const char
         return res;
 }
 
-static struct freq_attr sleep_wakeup_freq_attr = __ATTR(sleep_wakeup_freq, 0644,
-                show_sleep_wakeup_freq, store_sleep_wakeup_freq);
-
-static ssize_t show_awake_min_freq(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_awake_min_freq(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", awake_min_freq);
 }
 
-static ssize_t store_awake_min_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_awake_min_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -463,15 +445,12 @@ static ssize_t store_awake_min_freq(struct cpufreq_policy *policy, const char *b
         return res;
 }
 
-static struct freq_attr awake_min_freq_attr = __ATTR(awake_min_freq, 0644,
-                show_awake_min_freq, store_awake_min_freq);
-
-static ssize_t show_sample_rate_jiffies(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_sample_rate_jiffies(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", sample_rate_jiffies);
 }
 
-static ssize_t store_sample_rate_jiffies(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_sample_rate_jiffies(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -481,15 +460,12 @@ static ssize_t store_sample_rate_jiffies(struct cpufreq_policy *policy, const ch
         return res;
 }
 
-static struct freq_attr sample_rate_jiffies_attr = __ATTR(sample_rate_jiffies, 0644,
-                show_sample_rate_jiffies, store_sample_rate_jiffies);
-
-static ssize_t show_ramp_up_step(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_ramp_up_step(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", ramp_up_step);
 }
 
-static ssize_t store_ramp_up_step(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_ramp_up_step(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -499,15 +475,12 @@ static ssize_t store_ramp_up_step(struct cpufreq_policy *policy, const char *buf
         return res;
 }
 
-static struct freq_attr ramp_up_step_attr = __ATTR(ramp_up_step, 0644,
-                show_ramp_up_step, store_ramp_up_step);
-
-static ssize_t show_ramp_down_step(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_ramp_down_step(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", ramp_down_step);
 }
 
-static ssize_t store_ramp_down_step(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_ramp_down_step(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -517,15 +490,12 @@ static ssize_t store_ramp_down_step(struct cpufreq_policy *policy, const char *b
         return res;
 }
 
-static struct freq_attr ramp_down_step_attr = __ATTR(ramp_down_step, 0644,
-                show_ramp_down_step, store_ramp_down_step);
-
-static ssize_t show_max_cpu_load(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_max_cpu_load(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%lu\n", max_cpu_load);
 }
 
-static ssize_t store_max_cpu_load(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_max_cpu_load(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -535,15 +505,12 @@ static ssize_t store_max_cpu_load(struct cpufreq_policy *policy, const char *buf
         return res;
 }
 
-static struct freq_attr max_cpu_load_attr = __ATTR(max_cpu_load, 0644,
-                show_max_cpu_load, store_max_cpu_load);
-
-static ssize_t show_min_cpu_load(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_min_cpu_load(struct kobject *kobj, struct attribute *attr, char *buf)
 {
         return sprintf(buf, "%lu\n", min_cpu_load);
 }
 
-static ssize_t store_min_cpu_load(struct cpufreq_policy *policy, const char *buf, size_t count)
+static ssize_t store_min_cpu_load(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
 {
         ssize_t res;
         unsigned long input;
@@ -553,8 +520,23 @@ static ssize_t store_min_cpu_load(struct cpufreq_policy *policy, const char *buf
         return res;
 }
 
-static struct freq_attr min_cpu_load_attr = __ATTR(min_cpu_load, 0644,
-                show_min_cpu_load, store_min_cpu_load);
+#define define_global_rw_attr(_name)		\
+static struct global_attr _name##_attr =	\
+	__ATTR(_name, 0644, show_##_name, store_##_name)
+
+define_global_rw_attr(debug_mask);
+define_global_rw_attr(up_rate_us);
+define_global_rw_attr(down_rate_us);
+define_global_rw_attr(up_min_freq);
+define_global_rw_attr(sleep_max_freq);
+define_global_rw_attr(sleep_wakeup_freq);
+define_global_rw_attr(awake_min_freq);
+define_global_rw_attr(sample_rate_jiffies);
+define_global_rw_attr(ramp_up_step);
+define_global_rw_attr(ramp_down_step);
+define_global_rw_attr(max_cpu_load);
+define_global_rw_attr(min_cpu_load);
+
 
 static struct attribute * neokdemand_attributes[] = {
         &debug_mask_attr.attr,
@@ -594,7 +576,7 @@ static int cpufreq_governor_neokdemand(struct cpufreq_policy *new_policy,
                  * entries if we have already done so.
                  */
                 if (atomic_inc_return(&active_count) <= 1) {
-                        rc = sysfs_create_group(&new_policy->kobj, &neokdemand_attr_group);
+                        rc = sysfs_create_group(cpufreq_global_kobject, &neokdemand_attr_group);
                         if (rc)
                                 return rc;
                         pm_idle_old = pm_idle;
@@ -609,7 +591,7 @@ static int cpufreq_governor_neokdemand(struct cpufreq_policy *new_policy,
         case CPUFREQ_GOV_LIMITS:
                 neokdemand_update_min_max(this_neokdemand,new_policy,suspended);
                 if (this_neokdemand->cur_policy->cur != this_neokdemand->max_speed) {
-                        if (debug_mask & neokdemand_DEBUG_JUMPS)
+                        if (debug_mask & NEOKDEMAND_DEBUG_JUMPS)
                                 printk(KERN_INFO "neokdemandI: initializing to %d\n",this_neokdemand->max_speed);
                         __cpufreq_driver_target(new_policy, this_neokdemand->max_speed, CPUFREQ_RELATION_H);
                 }
@@ -621,7 +603,7 @@ static int cpufreq_governor_neokdemand(struct cpufreq_policy *new_policy,
 
                 if (atomic_dec_return(&active_count) > 1)
                         return 0;
-                sysfs_remove_group(&new_policy->kobj,
+                sysfs_remove_group(cpufreq_global_kobject,
                                 &neokdemand_attr_group);
 
                 pm_idle = pm_idle_old;
@@ -645,7 +627,7 @@ static void neokdemand_suspend(int cpu, int suspend)
             if (policy->cur > this_neokdemand->max_speed) {
                     new_freq = this_neokdemand->max_speed;
 
-                    if (debug_mask & neokdemand_DEBUG_JUMPS)
+                    if (debug_mask & NEOKDEMAND_DEBUG_JUMPS)
                             printk(KERN_INFO "neokdemandS: suspending at %d\n",new_freq);
 
                     __cpufreq_driver_target(policy, new_freq,
@@ -654,7 +636,7 @@ static void neokdemand_suspend(int cpu, int suspend)
         } else { // resume at max speed:
                 new_freq = validate_freq(this_neokdemand,sleep_wakeup_freq);
 
-                if (debug_mask & neokdemand_DEBUG_JUMPS)
+                if (debug_mask & NEOKDEMAND_DEBUG_JUMPS)
                         printk(KERN_INFO "neokdemandS: awaking at %d\n",new_freq);
 
                 __cpufreq_driver_target(policy, new_freq,
