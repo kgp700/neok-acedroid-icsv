@@ -1,3 +1,4 @@
+subdir-ccflags-y += -Os
 #
 # Makefile for the touchscreen drivers.
 #
